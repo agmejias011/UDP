@@ -1,28 +1,38 @@
-#TCPServer.py
+#source: https://pymotw.com
 
-#TCP (SOCK_STREAM) is a connection-based protocol. The connection is established and the two 
-#parties have a conversation until the connection is terminated by one of the parties or by a network error.
-from socket import socket, SOCK_STREAM, AF_INET
-#Create a TCP socket 
-#Notice the use of SOCK_STREAM for TCP packets
-serverSocket = socket(AF_INET, SOCK_STREAM)
-serverPort=12001
-# Assign IP address and port number to socket
-serverSocket.bind(('', serverPort))
-serverSocket.listen(1)
-print "Interrupt with CTRL-C"
+import socket
+import sys
+
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Bind the socket to the port
+server_address = ('localhost', 12001)
+print >>sys.stderr, 'starting up on %s port %s' % server_address
+sock.bind(server_address)
+
+# Listen for incoming connections
+sock.listen(1)
+
 while True:
-	try:
-		connectionSocket, addr = serverSocket.accept()
-		print "Connection from %s port %s" % addr
-		# Receive the client packet
-		message = connectionSocket.recv(2048)
-                #print "Orignal message from client: ", message
-		# Capitalize the message from the client
-		message = message.upper()
-		connectionSocket.send(message)
-		connectionSocket.close()
-	except KeyboardInterrupt:
-		print "\nInterrupted by CTRL-C"
-		break
-serverSocket.close()
+    # Wait for a connection
+    print >>sys.stderr, 'waiting for a connection'
+    connection, client_address = sock.accept()
+
+    try:
+        print >>sys.stderr, 'connection from', client_address
+
+        # Receive the data in small chunks and retransmit it
+        while True:
+            data = connection.recv(2048)
+            print >>sys.stderr, 'received "%s"' % data
+            if data:
+                print >>sys.stderr, 'sending data back to the client'
+                connection.sendall(data)
+            else:
+                print >>sys.stderr, 'no more data from', client_address
+                break
+            
+    finally:
+        # Clean up the connection
+        connection.close()
